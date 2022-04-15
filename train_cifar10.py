@@ -14,7 +14,7 @@ from mindiffusion.unet import NaiveUnet
 from mindiffusion.ddpm import DDPM
 
 
-def train_cifar10(n_epoch: int = 100, device="cuda:1") -> None:
+def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
 
     ddpm = DDPM(eps_model=NaiveUnet(3, 3), betas=(1e-4, 0.02), n_T=1000)
     ddpm.to(device)
@@ -30,9 +30,10 @@ def train_cifar10(n_epoch: int = 100, device="cuda:1") -> None:
         transform=tf,
     )
     dataloader = DataLoader(dataset, batch_size=128, shuffle=True, num_workers=16)
-    optim = torch.optim.Adam(ddpm.parameters(), lr=2e-4)
+    optim = torch.optim.Adam(ddpm.parameters(), lr=2e-5)
 
     for i in range(n_epoch):
+        print(f"Epoch {i} : ")
         ddpm.train()
 
         pbar = tqdm(dataloader)

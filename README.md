@@ -27,7 +27,7 @@ Currently has:
 
 - [x] Tiny implementation of DDPM
 - [x] MNIST, CIFAR dataset.
-- [x] Simple unet structure.
+- [x] Simple unet structure. + Simple Time embeddings.
 
 TODOS
 
