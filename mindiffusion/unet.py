@@ -7,19 +7,19 @@ import torch.nn.functional as F
 
 
 class Conv3(nn.Module):
-    def __init__(self, in_size: int, out_size: int) -> None:
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
         self.main = nn.Sequential(
-            nn.Conv2d(in_size, out_size, 3, 1, 1),
-            nn.BatchNorm2d(out_size),
+            nn.Conv2d(in_channels, out_channels, 3, 1, 1),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
         self.conv = nn.Sequential(
-            nn.Conv2d(out_size, 2 * out_size, 3, 1, 1),
-            nn.BatchNorm2d(2 * out_size),
+            nn.Conv2d(out_channels, 2 * out_channels, 3, 1, 1),
+            nn.BatchNorm2d(2 * out_channels),
             nn.ReLU(),
-            nn.Conv2d(2 * out_size, out_size, 3, 1, 1),
-            nn.BatchNorm2d(out_size),
+            nn.Conv2d(2 * out_channels, out_channels, 3, 1, 1),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
 
@@ -29,9 +29,9 @@ class Conv3(nn.Module):
 
 
 class UnetDown(nn.Module):
-    def __init__(self, in_size: int, out_size: int) -> None:
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super(UnetDown, self).__init__()
-        layers = [Conv3(in_size, out_size), nn.MaxPool2d(2)]
+        layers = [Conv3(in_channels, out_channels), nn.MaxPool2d(2)]
         self.model = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -40,12 +40,12 @@ class UnetDown(nn.Module):
 
 
 class UnetUp(nn.Module):
-    def __init__(self, in_size: int, out_size: int) -> None:
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super(UnetUp, self).__init__()
         layers = [
-            nn.ConvTranspose2d(in_size, out_size, 2, 2),
-            Conv3(out_size, out_size),
-            Conv3(out_size, out_size),
+            nn.ConvTranspose2d(in_channels, out_channels, 2, 2),
+            Conv3(out_channels, out_channels),
+            Conv3(out_channels, out_channels),
         ]
         self.model = nn.Sequential(*layers)
 
@@ -71,7 +71,7 @@ class TimeSiren(nn.Module):
 
 
 class NaiveUnet(nn.Module):
-    def __init__(self, in_channels, out_channels, n_feat=256) -> None:
+    def __init__(self, in_channels: int, out_channels: int, n_feat: int = 256) -> None:
         super(NaiveUnet, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
