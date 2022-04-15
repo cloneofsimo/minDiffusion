@@ -7,15 +7,15 @@
 
 Goal of this educational repository is to provide a self-contained, minimalistic implementation of diffusion models using Pytorch.
 
-Many implementations of diffusion models can be a bit overwhelming. Under 200 lines of code, fully self contained implementation of DDPM with Pytorch is a good starting point for anyone who wants to get started with Denoising Diffusion Models, without having to spend time on the details.
+Many implementations of diffusion models can be a bit overwhelming. Here, `superminddpm` : under 200 lines of code, fully self contained implementation of DDPM with Pytorch is a good starting point for anyone who wants to get started with Denoising Diffusion Models, without having to spend time on the details.
 
-If you want to execute the minimalistic implementation of DDPM, simply:
+Simply:
 
 ```
 $ python superminddpm.py
 ```
 
-Above script is self-contained.
+Above script is self-contained. (Of course, you need to have pytorch and torchvision installed. Latest version should suffice. We do not use any cutting edge features.)
 
 If you want to use the bit more refactored code, that runs CIFAR10 dataset:
 
@@ -38,3 +38,4 @@ TODOS
 # Updates!
 
 - Using more parameter yields better result for MNIST.
+- More comments in superminddpm.py
