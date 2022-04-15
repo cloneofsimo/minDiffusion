@@ -2,7 +2,7 @@
 
 <!-- #region -->
 <p align="center">
-<img  src="contents/ddpm_sample_14.png">
+<img  src="contents/_ddpm_sample_19.png">
 </p>
 
 Goal of this educational repository is to provide a self-contained, minimalistic implementation of diffusion models using Pytorch.

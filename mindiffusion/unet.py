@@ -15,10 +15,10 @@ class Conv3(nn.Module):
             nn.ReLU(),
         )
         self.conv = nn.Sequential(
-            nn.Conv2d(oc, 2 * oc, 3, 1, 1),
-            nn.BatchNorm2d(2 * oc),
+            nn.Conv2d(oc, oc, 3, 1, 1),
+            nn.BatchNorm2d(oc),
             nn.ReLU(),
-            nn.Conv2d(2 * oc, oc, 3, 1, 1),
+            nn.Conv2d(oc, oc, 3, 1, 1),
             nn.BatchNorm2d(oc),
             nn.ReLU(),
         )
@@ -59,15 +59,15 @@ class UnetUp(nn.Module):
 class TimeSiren(nn.Module):
     def __init__(self, emb_dim):
         super(TimeSiren, self).__init__()
-        self.freq = 2.0
+
         self.lin1 = nn.Linear(1, emb_dim, bias=False)
         self.lin2 = nn.Linear(emb_dim, emb_dim)
 
     def forward(self, x):
         x = x.view(-1, 1)
-        x = torch.sin(self.lin1(x) * self.freq)
+        x = torch.sin(self.lin1(x))
         x = self.lin2(x)
-        return x.unsqueeze(2)
+        return x
 
 
 class NaiveUnet(nn.Module):
@@ -108,7 +108,7 @@ class NaiveUnet(nn.Module):
 
         thro = self.up0(thro + temb)
 
-        up1 = self.up1(thro, down3) + temb
+        up1 = self.up1(thro, down3)
         up2 = self.up2(up1, down2)
         out = self.up3(up2, down1)
 
