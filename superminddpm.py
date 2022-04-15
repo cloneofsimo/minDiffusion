@@ -1,5 +1,8 @@
 """
 Extremely Minimalistic Implementation of DDPM
+Everything is self contained. (Except for pytorch and torchvision)
+
+run it with `python superminddpm.py`
 """
 
 from typing import Dict, Tuple
@@ -43,6 +46,13 @@ def ddpm_schedules(beta1: float, beta2: float, T: int) -> Dict[str, torch.Tensor
     }
 
 
+blk = lambda ic, oc: nn.Sequential(
+    nn.Conv2d(ic, oc, 7, padding=3),
+    nn.BatchNorm2d(oc),
+    nn.LeakyReLU(),
+)
+
+
 class DummyEpsModel(nn.Module):
     """
     This should be unet-like, but let's don't think about the model too much :P
@@ -51,19 +61,14 @@ class DummyEpsModel(nn.Module):
     def __init__(self, n_channel: int) -> None:
         super(DummyEpsModel, self).__init__()
         self.conv = nn.Sequential(  # with batchnorm
-            nn.Conv2d(n_channel, 128, 7, padding=3),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.Conv2d(128, 128, 7, padding=3),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.Conv2d(128, 64, 7, padding=3),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.Conv2d(64, 16, 7, padding=3),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.Conv2d(16, n_channel, 3, padding=1),
+            blk(n_channel, 64),
+            blk(64, 128),
+            blk(128, 256),
+            blk(256, 512),
+            blk(512, 256),
+            blk(256, 128),
+            blk(128, 64),
+            nn.Conv2d(64, n_channel, 3, padding=1),
         )
 
     def forward(self, x, t) -> torch.Tensor:
@@ -118,7 +123,7 @@ class DDPM(nn.Module):
         return x_t
 
 
-def train(n_epoch: int = 100, device="cuda:0") -> None:
+def train_mnist(n_epoch: int = 100, device="cuda:0") -> None:
 
     ddpm = DDPM(eps_model=DummyEpsModel(1), betas=(1e-4, 0.02), n_T=1000)
     ddpm.to(device)
@@ -133,8 +138,8 @@ def train(n_epoch: int = 100, device="cuda:0") -> None:
         download=True,
         transform=tf,
     )
-    dataloader = DataLoader(dataset, batch_size=1024, shuffle=True, num_workers=20)
-    optim = torch.optim.Adam(ddpm.parameters(), lr=1e-4)
+    dataloader = DataLoader(dataset, batch_size=128, shuffle=True, num_workers=20)
+    optim = torch.optim.Adam(ddpm.parameters(), lr=2e-5)
 
     for i in range(n_epoch):
         ddpm.train()
@@ -155,10 +160,13 @@ def train(n_epoch: int = 100, device="cuda:0") -> None:
 
         ddpm.eval()
         with torch.no_grad():
-            x = ddpm.sample(16, (1, 28, 28), device)
-            grid = make_grid(x, nrow=4)
+            xh = ddpm.sample(16, (1, 28, 28), device)
+            grid = make_grid(xh, nrow=4)
             save_image(grid, f"./contents/ddpm_sample_{i}.png")
+
+            # save model
+            torch.save(ddpm.state_dict(), f"./ddpm_mnist.pth")
 
 
 if __name__ == "__main__":
-    train()
+    train_mnist()
