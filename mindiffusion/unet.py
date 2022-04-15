@@ -25,7 +25,7 @@ class Conv3(nn.Module):
 
     def forward(self, x):
         x = self.main(x)
-        return self.conv(x) + x
+        return self.conv(x)
 
 
 class UnetDown(nn.Module):
@@ -56,28 +56,56 @@ class UnetUp(nn.Module):
         return x
 
 
+class TimeSiren(nn.Module):
+    def __init__(self, emb_dim):
+        super(TimeSiren, self).__init__()
+        self.freq = 2.0
+        self.lin1 = nn.Linear(1, emb_dim, bias=False)
+        self.lin2 = nn.Linear(emb_dim, emb_dim)
+
+    def forward(self, x):
+        x = x.view(-1, 1)
+        x = torch.sin(self.lin1(x) * self.freq)
+        x = self.lin2(x)
+        return x.unsqueeze(2)
+
+
 class NaiveUnet(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, n_feat=256):
         super(NaiveUnet, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
-        N = 128
-        self.down1 = UnetDown(self.in_channels, N)
-        self.down2 = UnetDown(N, 2 * N)
-        self.down3 = UnetDown(2 * N, 2 * N)
 
-        self.throu = Conv3(2 * N, 2 * N)
+        self.down1 = UnetDown(self.in_channels, n_feat)
+        self.down2 = UnetDown(n_feat, 2 * n_feat)
+        self.down3 = UnetDown(2 * n_feat, 2 * n_feat)
 
-        self.up1 = UnetUp(4 * N, 2 * N)
-        self.up2 = UnetUp(4 * N, N)
-        self.up3 = UnetUp(2 * N, N)
-        self.out = nn.Conv2d(N, self.out_channels, 1)
+        self.to_vec = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1), nn.BatchNorm2d(2 * n_feat), nn.ReLU()
+        )
+
+        self.timeembed = TimeSiren(2 * n_feat)
+
+        self.up0 = nn.Sequential(
+            nn.ConvTranspose2d(2 * n_feat, 2 * n_feat, 4),
+            nn.BatchNorm2d(2 * n_feat),
+            nn.ReLU(),
+        )
+
+        self.up1 = UnetUp(4 * n_feat, 2 * n_feat)
+        self.up2 = UnetUp(4 * n_feat, n_feat)
+        self.up3 = UnetUp(2 * n_feat, n_feat)
+        self.out = nn.Conv2d(n_feat, self.out_channels, 1)
 
     def forward(self, x, t):
         down1 = self.down1(x)
         down2 = self.down2(down1)
         down3 = self.down3(down2)
-        thro = self.throu(down3)
+
+        thro = self.to_vec(down3)
+        temb = self.timeembed(t)
+
+        thro = self.up0(thro + temb.view(temb.shape[0], temb.shape[1], 1, 1))
 
         up1 = self.up1(thro, down3)
         up2 = self.up2(up1, down2)

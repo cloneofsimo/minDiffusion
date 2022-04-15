@@ -44,7 +44,7 @@ class DDPM(nn.Module):
 
         for i in range(self.n_T - 1, 0, -1):
             z = torch.randn(n_sample, *size).to(device)
-            eps = self.eps_model(x_t, i / self.n_T)
+            eps = self.eps_model(x_t, torch.tensor(i / self.n_T).to(device))
             x_t = (
                 self.oneover_sqrta[i] * (x_t - eps * self.mab_over_sqrtmab[i])
                 + self.sqrt_beta_t[i] * z

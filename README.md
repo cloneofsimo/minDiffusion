@@ -34,3 +34,7 @@ TODOS
 - [ ] DDIM
 - [ ] Classifier Guidance
 - [ ] Multimodality
+
+# Updates!
+
+- Using more parameter yields better result for MNIST.
