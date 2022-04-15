@@ -13,6 +13,8 @@ class Conv3(nn.Module):
             nn.Conv2d(ic, oc, 3, 1, 1),
             nn.BatchNorm2d(oc),
             nn.ReLU(),
+        )
+        self.conv = nn.Sequential(
             nn.Conv2d(oc, oc, 3, 1, 1),
             nn.BatchNorm2d(oc),
             nn.ReLU(),
@@ -22,7 +24,8 @@ class Conv3(nn.Module):
         )
 
     def forward(self, x):
-        return self.main(x)
+        x = self.main(x)
+        return self.conv(x) + x
 
 
 class UnetDown(nn.Module):
@@ -42,6 +45,7 @@ class UnetUp(nn.Module):
         layers = [
             nn.ConvTranspose2d(in_size, out_size, 2, 2),
             Conv3(out_size, out_size),
+            Conv3(out_size, out_size),
         ]
         self.model = nn.Sequential(*layers)
 
@@ -57,16 +61,17 @@ class NaiveUnet(nn.Module):
         super(NaiveUnet, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.down1 = UnetDown(self.in_channels, 64)
-        self.down2 = UnetDown(64, 128)
-        self.down3 = UnetDown(128, 128)
+        N = 128
+        self.down1 = UnetDown(self.in_channels, N)
+        self.down2 = UnetDown(N, 2 * N)
+        self.down3 = UnetDown(2 * N, 2 * N)
 
-        self.throu = Conv3(128, 128)
+        self.throu = Conv3(2 * N, 2 * N)
 
-        self.up1 = UnetUp(256, 128)
-        self.up2 = UnetUp(256, 64)
-        self.up3 = UnetUp(128, 32)
-        self.out = nn.Conv2d(32, self.out_channels, 1)
+        self.up1 = UnetUp(4 * N, 2 * N)
+        self.up2 = UnetUp(4 * N, N)
+        self.up3 = UnetUp(2 * N, N)
+        self.out = nn.Conv2d(N, self.out_channels, 1)
 
     def forward(self, x, t):
         down1 = self.down1(x)
