@@ -15,10 +15,10 @@ class Conv3(nn.Module):
             nn.ReLU(),
         )
         self.conv = nn.Sequential(
-            nn.Conv2d(oc, oc, 3, 1, 1),
-            nn.BatchNorm2d(oc),
+            nn.Conv2d(oc, 2 * oc, 3, 1, 1),
+            nn.BatchNorm2d(2 * oc),
             nn.ReLU(),
-            nn.Conv2d(oc, oc, 3, 1, 1),
+            nn.Conv2d(2 * oc, oc, 3, 1, 1),
             nn.BatchNorm2d(oc),
             nn.ReLU(),
         )
@@ -76,6 +76,8 @@ class NaiveUnet(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
+        self.n_feat = n_feat
+
         self.down1 = UnetDown(self.in_channels, n_feat)
         self.down2 = UnetDown(n_feat, 2 * n_feat)
         self.down3 = UnetDown(2 * n_feat, 2 * n_feat)
@@ -94,8 +96,7 @@ class NaiveUnet(nn.Module):
 
         self.up1 = UnetUp(4 * n_feat, 2 * n_feat)
         self.up2 = UnetUp(4 * n_feat, n_feat)
-        self.up3 = UnetUp(2 * n_feat, n_feat)
-        self.out = nn.Conv2d(n_feat, self.out_channels, 1)
+        self.up3 = UnetUp(2 * n_feat, 3)
 
     def forward(self, x, t):
         down1 = self.down1(x)
@@ -103,14 +104,12 @@ class NaiveUnet(nn.Module):
         down3 = self.down3(down2)
 
         thro = self.to_vec(down3)
-        temb = self.timeembed(t)
+        temb = self.timeembed(t).view(-1, self.n_feat * 2, 1, 1)
 
-        thro = self.up0(thro + temb.view(temb.shape[0], temb.shape[1], 1, 1))
+        thro = self.up0(thro + temb)
 
-        up1 = self.up1(thro, down3)
+        up1 = self.up1(thro, down3) + temb
         up2 = self.up2(up1, down2)
-        up3 = self.up3(up2, down1)
-
-        out = self.out(up3)
+        out = self.up3(up2, down1)
 
         return out
