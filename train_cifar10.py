@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 from sympy import Ci
 from tqdm import tqdm
 
@@ -14,9 +14,15 @@ from mindiffusion.unet import NaiveUnet
 from mindiffusion.ddpm import DDPM
 
 
-def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
+def train_cifar10(
+    n_epoch: int = 100, device: str = "cuda:1", load_pth: Optional[str] = None
+) -> None:
 
-    ddpm = DDPM(eps_model=NaiveUnet(3, 3), betas=(1e-4, 0.02), n_T=1000)
+    ddpm = DDPM(eps_model=NaiveUnet(3, 3, n_feat=128), betas=(1e-4, 0.02), n_T=1000)
+
+    if load_pth is not None:
+        ddpm.load_state_dict(torch.load("ddpm_cifar.pth"))
+
     ddpm.to(device)
 
     tf = transforms.Compose(
@@ -29,7 +35,8 @@ def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
         download=True,
         transform=tf,
     )
-    dataloader = DataLoader(dataset, batch_size=128, shuffle=True, num_workers=16)
+
+    dataloader = DataLoader(dataset, batch_size=512, shuffle=True, num_workers=16)
     optim = torch.optim.Adam(ddpm.parameters(), lr=1e-5)
 
     for i in range(n_epoch):
@@ -49,12 +56,12 @@ def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
                 loss_ema = 0.9 * loss_ema + 0.1 * loss.item()
             pbar.set_description(f"loss: {loss_ema:.4f}")
             optim.step()
-            
+
         ddpm.eval()
         with torch.no_grad():
             xh = ddpm.sample(8, (3, 32, 32), device)
             xset = torch.cat([xh, x[:8]], dim=0)
-            grid = make_grid(xset, normalize = True, value_range=(-1, 1), nrow=4)
+            grid = make_grid(xset, normalize=True, value_range=(-1, 1), nrow=4)
             save_image(grid, f"./contents/ddpm_sample_cifar{i}.png")
 
             # save model

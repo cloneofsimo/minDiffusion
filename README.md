@@ -30,6 +30,12 @@ $ python train_cifar10.py
 
 Above result took about 2 hours of training on single 3090 GPU. Top 8 images are generated, bottom 8 are ground truth.
 
+Here is another example, trained on 100 epochs (about 1.5 hours)
+
+<p align="center">
+<img  src="contents/_ddpm_sample_cifar100.png">
+</p>
+
 Currently has:
 
 - [x] Tiny implementation of DDPM
