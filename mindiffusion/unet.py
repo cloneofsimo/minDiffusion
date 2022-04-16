@@ -29,7 +29,7 @@ class Conv3(nn.Module):
         x = self.main(x)
         if self.is_res:
             x = x + self.conv(x)
-            return  x / 2
+            return  x / 1.414
         else:
             return self.conv(x)
 

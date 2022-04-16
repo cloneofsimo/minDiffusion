@@ -20,7 +20,7 @@ def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
     ddpm.to(device)
 
     tf = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (1, 1, 1))]
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     )
 
     dataset = CIFAR10(
@@ -30,7 +30,7 @@ def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
         transform=tf,
     )
     dataloader = DataLoader(dataset, batch_size=128, shuffle=True, num_workers=16)
-    optim = torch.optim.Adam(ddpm.parameters(), lr=2e-5)
+    optim = torch.optim.Adam(ddpm.parameters(), lr=1e-5)
 
     for i in range(n_epoch):
         print(f"Epoch {i} : ")
@@ -49,11 +49,12 @@ def train_cifar10(n_epoch: int = 100, device: str = "cuda:1") -> None:
                 loss_ema = 0.9 * loss_ema + 0.1 * loss.item()
             pbar.set_description(f"loss: {loss_ema:.4f}")
             optim.step()
-
+            
         ddpm.eval()
         with torch.no_grad():
-            xh = ddpm.sample(16, (3, 32, 32), device)
-            grid = make_grid(xh, nrow=4)
+            xh = ddpm.sample(8, (3, 32, 32), device)
+            xset = torch.cat([xh, x[:8]], dim=0)
+            grid = make_grid(xset, normalize = True, value_range=(-1, 1), nrow=4)
             save_image(grid, f"./contents/ddpm_sample_cifar{i}.png")
 
             # save model

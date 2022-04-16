@@ -23,6 +23,11 @@ If you want to use the bit more refactored code, that runs CIFAR10 dataset:
 $ python train_cifar10.py
 ```
 
+<!-- #region -->
+<p align="center">
+<img  src="contents/_ddpm_sample_cifar43.png">
+</p>
+
 Currently has:
 
 - [x] Tiny implementation of DDPM
