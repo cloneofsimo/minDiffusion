@@ -28,6 +28,8 @@ $ python train_cifar10.py
 <img  src="contents/_ddpm_sample_cifar43.png">
 </p>
 
+Above result took about 2 hours of training on single 3090 GPU. Top 8 images are generated, bottom 8 are ground truth.
+
 Currently has:
 
 - [x] Tiny implementation of DDPM
