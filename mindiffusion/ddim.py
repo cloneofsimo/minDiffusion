@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
-from ddpm import DDPM
+from .ddpm import DDPM
 
 
 # https://arxiv.org/abs/2010.02502
@@ -26,7 +26,7 @@ class DDIM(DDPM):
 
         for i in range(self.n_T, 1, -1):
             z = torch.randn(n_sample, *size).to(device) if i > 1 else 0
-            eps = self.eps_model(x_i, i / self.n_T)
+            eps = self.eps_model(x_i, torch.tensor(i / self.n_T).to(device).repeat(n_sample, 1))
             x0_t = (x_i - eps * (1 - self.alphabar_t[i]).sqrt()) / self.alphabar_t[i].sqrt()
             c1 = self.eta * ((1 - self.alphabar_t[i] / self.alphabar_t[i - 1]) * (1 - self.alphabar_t[i - 1]) / (
                     1 - self.alphabar_t[i])).sqrt()
