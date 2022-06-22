@@ -1,4 +1,5 @@
 data
+weights
 __pycache__
 *.pth
 ddpm*.png
