@@ -8,23 +8,109 @@ Everything is self contained. (Except for pytorch and torchvision... of course)
 run it with `python superminddpm.py`
 """
 import time
-from typing import Dict, Tuple
-from tqdm import tqdm
-from optparse import OptionParser
 import os
 import logging
 import sys
+import numpy as np
+from tqdm import tqdm
+from typing import Dict, Tuple
+from optparse import OptionParser
+from matplotlib import pyplot as plt
+
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+from torchvision.utils import save_image, make_grid
+
 logging.basicConfig(stream=sys.stdout,
                     format='[%(levelname)s] - [%(asctime)s] - [%(filename)s:%(lineno)d] - %(message)s',
                     level=logging.INFO)
 
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 
-from torchvision.datasets import MNIST
-from torchvision import transforms
-from torchvision.utils import save_image, make_grid
+class RandomCrop(object):
+    """Crop randomly the image in a sample.
+
+    Args:
+        output_size (tuple or int): Desired output size. If int, square crop
+            is made.
+    """
+
+    def __init__(self, output_size):
+        assert isinstance(output_size, (int, tuple))
+        if isinstance(output_size, int):
+            self.output_size = (output_size, output_size)
+        else:
+            assert len(output_size) == 2
+            self.output_size = output_size
+
+    def __call__(self, image):
+
+        h, w = image.shape[1:]
+        new_h, new_w = self.output_size
+
+        top = np.random.randint(0, h - new_h)
+        left = np.random.randint(0, w - new_w)
+
+        image = image[:,
+                      top: top + new_h,
+                      left: left + new_w]
+
+        return image
+
+
+class PastisDataset(Dataset):
+    def __init__(self, path, transform=None):
+        super(PastisDataset, self).__init__()
+        self.files = []
+        for dirpath, _, filenames in os.walk(path):
+            for f in filenames:
+                self.files.append(os.path.abspath(os.path.join(dirpath, f)))
+        self.transform = transform
+
+    def __getitem__(self, index):
+        x = np.load(self.files[index]).astype(np.float32)
+        # select random time series
+        random_ts = np.random.randint(0, x.shape[0])
+        x = torch.from_numpy(x[random_ts, [2, 1, 0]])
+        if self.transform:
+            x = self.transform(x)
+        return x
+
+    def __len__(self):
+        return len(self.files)
+
+
+def get_rgb(x):
+    """Utility function to get a displayable rgb image
+    from a Sentinel-2 time series.
+    """
+    im = x.cpu().numpy()
+    mx = im.max(axis=(1, 2))
+    mi = im.min(axis=(1, 2))
+    im = (im - mi[:, None, None])/(mx - mi)[:, None, None]
+    im = im.swapaxes(0, 2).swapaxes(0, 1)
+    im = np.clip(im, a_max=1, a_min=0)
+    return im
+
+
+def plot_imgs():
+
+    tf = transforms.Compose([
+        RandomCrop((64, 64)),
+        transforms.Normalize([560, 676, 546],
+                             [558, 415, 284])
+    ])
+
+    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/PASTIS")
+    dataset = PastisDataset(data_path, transform=tf)
+
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
+    for batch_idx, batch in enumerate(dataloader):
+        for img_idx in range(batch.shape[0]):
+            img = get_rgb(batch[img_idx])
+            plt.imshow(img)
+            plt.show()
 
 
 def ddpm_schedules(beta1: float, beta2: float, T: int) -> Dict[str, torch.Tensor]:
@@ -140,7 +226,7 @@ class DDPM(nn.Module):
         return x_i
 
 
-def train_mnist(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()//2, train_ckpt=1,
+def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()//2, train_ckpt=1,
                 load_weights=False) -> None:
 
     model = DDPM(eps_model=DummyEpsModel(1), betas=(1e-4, 0.02), n_T=1000)
@@ -151,19 +237,19 @@ def train_mnist(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()
         logging.info("Loaded saved weights")
     model.to(device)
 
-    tf = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5,), (1.0))]
-    )
+    tf = transforms.Compose([
+        RandomCrop((64, 64)),
+        transforms.Normalize([560, 676, 546],
+                             [558, 415, 284])
+    ])
 
-    dataset = MNIST(
-        "./data",
-        train=True,
-        download=True,
-        transform=tf,
-    )
-    dataloader = DataLoader(dataset, batch_size=128, shuffle=True, num_workers=data_loaders)
+    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/PASTIS")
+    dataset = PastisDataset(data_path, transform=tf)
+
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=data_loaders)
     optim = torch.optim.Adam(model.parameters(), lr=2e-4)
 
+    # plot_imgs()
     try:
         for i in range(n_epoch):
             model.train()
@@ -192,7 +278,7 @@ def train_mnist(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()
         torch.save(model.state_dict(), weights_path)
 
 
-def eval_mnist(device="cuda:0"):
+def eval_maps(device="cuda:0"):
     weights_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights/ddpm_mnist.pth")
     if not os.path.exists(weights_path):
         raise ValueError(f"path {weights_path} doesn't exist")
@@ -232,8 +318,10 @@ if __name__ == "__main__":
         device = f"cuda:{str(options.gpu_num)}"
 
     if options.mode == 'train':
-        train_mnist(options.n_epochs, device, options.data_loaders, options.train_ckpt, options.load_weights)
+        logging.info("Training starts")
+        train_maps(options.n_epochs, device, options.data_loaders, options.train_ckpt, options.load_weights)
     elif options.mode == 'eval':
-        eval_mnist(device)
+        logging.info("Eval starts")
+        eval_maps(device)
     else:
         raise ValueError(f"incorrect mode {options.mode}, must be in [train, eval]")
