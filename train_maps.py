@@ -13,7 +13,6 @@ import logging
 import sys
 from tqdm import tqdm
 from optparse import OptionParser
-import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
@@ -23,8 +22,8 @@ from torchvision.utils import save_image, make_grid
 from mindiffusion.unet import NaiveUnet
 from mindiffusion.ddpm import DDPM
 from custom_datasets import PastisDataset
-from custom_datasets.pastis import RandomCrop,\
-    DATA_PATH, MEANS, STDS, CROP_SHAPE
+from custom_datasets.pastis import compute_stats_pastis, RandomCrop,\
+    DATA_PATH, CROP_SHAPE
 
 WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights/ddpm_maps.pth")
 
@@ -43,14 +42,17 @@ def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()/
         logging.info("Loaded saved weights")
     model.to(device)
 
+    MEANS = [1378.9217751242898, 1312.8329745205965, 1132.4872602982955]
+    STDS = [733.1572029807351, 587.0386005748402, 550.9132863825017]
+    # means, stds = compute_stats_pastis()
     tf = transforms.Compose([
         RandomCrop(CROP_SHAPE),
         transforms.Normalize(MEANS, STDS)
     ])
 
     dataset = PastisDataset(DATA_PATH, transform=tf)
-    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=data_loaders)
-    optim = torch.optim.Adam(model.parameters(), lr=2e-4)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=data_loaders)
+    optim = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     try:
         for i in range(n_epoch):
@@ -97,12 +99,7 @@ def eval_maps(device="cuda:0", model=None, it_num='last'):
     model.eval()
     with torch.no_grad():
         xh = model.sample(16, (3, 64, 64), device)
-        inv_normalize = transforms.Normalize(
-            mean=(-np.array(MEANS)/np.array(STDS)).tolist(),
-            std=(1/np.array(STDS)).tolist()
-        )
-        xh = inv_normalize(xh)
-        grid = make_grid(xh, nrow=4, normalize=True)
+        grid = make_grid(xh, nrow=4, normalize=True, value_range=(-1, 1))
         save_image(grid, f"./contents/ddpm_sample_{it_num}.png")
 
 
