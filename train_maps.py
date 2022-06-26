@@ -116,6 +116,9 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
 
+    if not os.path.exists(os.path.dirname(WEIGHTS_PATH)):
+        os.mkdir(os.path.dirname(WEIGHTS_PATH))
+
     device = "cpu"
     if options.gpu_num != -1:
         assert torch.cuda.is_available(), "cuda isn't available, check cuda installation"
