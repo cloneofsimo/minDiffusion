@@ -13,19 +13,22 @@ import logging
 import sys
 from tqdm import tqdm
 from optparse import OptionParser
-
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image, make_grid
 
+from custom_datasets import FloodDataset
 from mindiffusion.unet import NaiveUnet
 from mindiffusion.ddpm import DDPM
-from custom_datasets import PastisDataset
-from custom_datasets.pastis import compute_stats_pastis, RandomCrop,\
-    DATA_PATH, CROP_SHAPE
 
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/FloodDataset")
 WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights/ddpm_maps.pth")
+RESIZE_SHAPE = (256, 256)
+CROP_SHAPE = (64, 64)
+DATASET_MEANS = [0.40892401337623596, 0.44834592938423157, 0.34010952711105347]
+DATASET_STDS = [0.2070530503988266, 0.19301235675811768, 0.20783671736717224]
+
 
 logging.basicConfig(stream=sys.stdout,
                     format='[%(levelname)s] - [%(asctime)s] - [%(filename)s:%(lineno)d] - %(message)s',
@@ -43,12 +46,18 @@ def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()/
     model.to(device)
 
     tf = transforms.Compose([
-        RandomCrop(CROP_SHAPE),
-        transforms.Normalize([0., 0., 0.], [255., 255., 255.]),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        transforms.ToPILImage(),
+        transforms.Resize(RESIZE_SHAPE),
+        transforms.RandomCrop(CROP_SHAPE),
+        transforms.ToTensor(),
+        transforms.Normalize(DATASET_MEANS,
+                             DATASET_STDS)
     ])
 
-    dataset = PastisDataset(DATA_PATH, transform=tf)
+    dataset = FloodDataset(
+        path=DATA_PATH,
+        transform=tf,
+    )
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=data_loaders)
     optim = torch.optim.Adam(model.parameters(), lr=1e-5)
 
