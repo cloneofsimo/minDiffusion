@@ -42,12 +42,10 @@ def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()/
         logging.info("Loaded saved weights")
     model.to(device)
 
-    MEANS = [1378.9217751242898, 1312.8329745205965, 1132.4872602982955]
-    STDS = [733.1572029807351, 587.0386005748402, 550.9132863825017]
-    # means, stds = compute_stats_pastis()
     tf = transforms.Compose([
         RandomCrop(CROP_SHAPE),
-        transforms.Normalize(MEANS, STDS)
+        transforms.Normalize([0., 0., 0.], [255., 255., 255.]),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
     dataset = PastisDataset(DATA_PATH, transform=tf)

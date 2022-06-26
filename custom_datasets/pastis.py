@@ -53,15 +53,16 @@ class PastisDataset(Dataset):
 
         assert self.files, f"{path} folder is empty"
         self.transform = transform
+        self.eps = 1e-6
 
     def __getitem__(self, index):
         x = np.load(self.files[index]).astype(np.float32)
         # select random time series
         random_ts = np.random.randint(0, x.shape[0])
         x = torch.from_numpy(x[random_ts, [2, 1, 0]])
-        # x_min = x.view(x.size(0), -1).min(dim=-1).values[:, None, None]
-        # x_max = x.view(x.size(0), -1).max(dim=-1).values[:, None, None]
-        # x = (x - x_min)/(x_max-x_min)
+        x_min = x.view(x.size(0), -1).min(dim=-1).values[:, None, None]
+        x_max = x.view(x.size(0), -1).max(dim=-1).values[:, None, None]
+        x = torch.floor((x - x_min) * (1 / (x_max - x_min + self.eps) * 255))
         if self.transform:
             x = self.transform(x)
         return x
@@ -79,7 +80,7 @@ def plot_imgs_pastis():
 
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
     for batch_idx, batch in enumerate(dataloader):
-        grid = make_grid(batch, nrow=4, normalize=True, scale_each=True)
+        grid = make_grid(batch, nrow=4, normalize=True)
         plt.imshow(grid.permute(1, 2, 0))
         plt.show()
 
@@ -120,4 +121,4 @@ def compute_max():
 
 if __name__ == "__main__":
     # print(compute_stats_pastis())
-    print(compute_max())
+    plot_imgs_pastis()
