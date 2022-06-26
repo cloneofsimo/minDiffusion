@@ -46,12 +46,11 @@ def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()/
     model.to(device)
 
     tf = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize(RESIZE_SHAPE),
-        transforms.RandomCrop(CROP_SHAPE),
-        transforms.ToTensor(),
-        transforms.Normalize(DATASET_MEANS,
-                             DATASET_STDS)
+        transforms.Resize((64, 64)),
+        transforms.Normalize((0, 0, 0),
+                             (255, 255, 255)),
+        transforms.Normalize((0.5, 0.5, 0.5),
+                             (0.5, 0.5, 0.5)),
     ])
 
     dataset = FloodDataset(

@@ -14,7 +14,7 @@ def plot_imgs(dataset):
     """
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
     for batch_idx, batch in enumerate(dataloader):
-        grid = make_grid(batch, nrow=4, normalize=False)
+        grid = make_grid(batch, nrow=4, normalize=True, value_range=(-1, 1))
         plt.imshow(grid.permute(1, 2, 0))
         plt.show()
 
@@ -42,7 +42,13 @@ def compute_stats(dataset):
 if __name__ == "__main__":
     data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/FloodDataset")
     tf = transforms.Compose([
-        transforms.Resize((256, 256)),
+        transforms.Resize((64, 64)),
+        transforms.Normalize((0, 0, 0),
+                             (255, 255, 255)),
+        transforms.Normalize((0.5, 0.5, 0.5),
+                             (0.5, 0.5, 0.5)),
+        # transforms.Normalize((0.4089861214160919, 0.44838273525238037, 0.340173602104187),
+        #                      (0.20696242153644562, 0.19287624955177307, 0.20775844156742096))
     ])
     dataset = FloodDataset(
         path=data_path,

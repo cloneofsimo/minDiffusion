@@ -17,8 +17,7 @@ class FloodDataset(Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        # select random time series
-        x = read_image(self.files[index])
+        x = read_image(self.files[index]).float()
         if self.transform:
             x = self.transform(x)
         return x
