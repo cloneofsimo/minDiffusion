@@ -25,9 +25,6 @@ from mindiffusion.ddpm import DDPM
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/maps_train/images")
 WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights/ddpm_maps.pth")
 RESIZE_SHAPE = (64, 64)
-# CROP_SHAPE = (64, 64)
-# DATASET_MEANS = [0.40892401337623596, 0.44834592938423157, 0.34010952711105347]
-# DATASET_STDS = [0.2070530503988266, 0.19301235675811768, 0.20783671736717224]
 
 
 logging.basicConfig(stream=sys.stdout,
@@ -38,7 +35,7 @@ logging.basicConfig(stream=sys.stdout,
 def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()//2, train_ckpt=1,
                 load_weights=False) -> None:
 
-    model = DDPM(eps_model=NaiveUnet(3, 3, n_feat=128), betas=(1e-4, 0.02), n_T=1000)
+    model = DDPM(eps_model=NaiveUnet(3, 3, n_feat=256), betas=(1e-4, 0.02), n_T=1000)
 
     if load_weights and os.path.exists(WEIGHTS_PATH):
         model.load_state_dict(torch.load(WEIGHTS_PATH))
@@ -95,7 +92,7 @@ def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()/
 def eval_maps(device="cuda:0", model=None, it_num='last'):
     if model is None:
         assert os.path.exists(WEIGHTS_PATH), f"path {WEIGHTS_PATH} doesn't exist"
-        model = DDPM(eps_model=NaiveUnet(3, 3, n_feat=128), betas=(1e-4, 0.02), n_T=1000)
+        model = DDPM(eps_model=NaiveUnet(3, 3, n_feat=256), betas=(1e-4, 0.02), n_T=1000)
         model.load_state_dict(torch.load(WEIGHTS_PATH))
         model.to(device)
         logging.info("Loaded model")
@@ -103,7 +100,7 @@ def eval_maps(device="cuda:0", model=None, it_num='last'):
     model.eval()
     with torch.no_grad():
         xh = model.sample(16, (3, 64, 64), device)
-        grid = make_grid(xh, nrow=4, normalize=False)
+        grid = make_grid(xh, nrow=4, normalize=True, scale_each=True)
         save_image(grid, f"./contents/ddpm_sample_{it_num}.png")
 
 

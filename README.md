@@ -36,6 +36,37 @@ Here is another example, trained on 100 epochs (about 1.5 hours)
 <img  src="contents/_ddpm_sample_cifar100.png">
 </p>
 
+To train maps generation download [Mapping Challenge](https://www.aicrowd.com/challenges/mapping-challenge) train dataset
+and extract to `data` folder in next format:
+```plain
+minDiffusion
+├── contents
+├── custom_datasets
+├── data
+│   ├── maps_train
+│       ├──images
+│          ├──000000000000.jpg
+...        ...
+```
+
+Then run next line (you can use additional useful flags, see in file)
+
+```
+$ python train_maps.py
+```
+
+Generated samples:
+
+<p align="center">
+<img  src="contents/gen_maps_sample_8.png">
+</p>
+
+Real samples:
+
+<p align="center">
+<img  src="contents/maps_real_1.png">
+</p>
+
 Currently has:
 
 - [x] Tiny implementation of DDPM
