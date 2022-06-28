@@ -18,16 +18,16 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image, make_grid
 
-from custom_datasets import FloodDataset
+from custom_datasets import MapsDataset
 from mindiffusion.unet import NaiveUnet
 from mindiffusion.ddpm import DDPM
 
-DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/FloodDataset")
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/maps_train/images")
 WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights/ddpm_maps.pth")
-RESIZE_SHAPE = (256, 256)
-CROP_SHAPE = (64, 64)
-DATASET_MEANS = [0.40892401337623596, 0.44834592938423157, 0.34010952711105347]
-DATASET_STDS = [0.2070530503988266, 0.19301235675811768, 0.20783671736717224]
+RESIZE_SHAPE = (64, 64)
+# CROP_SHAPE = (64, 64)
+# DATASET_MEANS = [0.40892401337623596, 0.44834592938423157, 0.34010952711105347]
+# DATASET_STDS = [0.2070530503988266, 0.19301235675811768, 0.20783671736717224]
 
 
 logging.basicConfig(stream=sys.stdout,
@@ -49,12 +49,10 @@ def train_maps(n_epoch: int = 100, device="cuda:0", data_loaders=os.cpu_count()/
         transforms.Resize((64, 64)),
         transforms.Normalize((0, 0, 0),
                              (255, 255, 255)),
-        transforms.Normalize((0.5, 0.5, 0.5),
-                             (0.5, 0.5, 0.5)),
     ])
 
-    dataset = FloodDataset(
-        path=DATA_PATH,
+    dataset = MapsDataset(
+        image_path=DATA_PATH,
         transform=tf,
     )
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=data_loaders)
@@ -105,7 +103,7 @@ def eval_maps(device="cuda:0", model=None, it_num='last'):
     model.eval()
     with torch.no_grad():
         xh = model.sample(16, (3, 64, 64), device)
-        grid = make_grid(xh, nrow=4, normalize=True, value_range=(-1, 1))
+        grid = make_grid(xh, nrow=4, normalize=False)
         save_image(grid, f"./contents/ddpm_sample_{it_num}.png")
 
 
